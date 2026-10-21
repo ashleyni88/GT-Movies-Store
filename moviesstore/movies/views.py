@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import Movie, Review
+from .models import Movie, Review, Rating
 from django.contrib.auth.decorators import login_required
+from django.db.models import Avg
 
 # Create your views here.
 
@@ -22,6 +23,9 @@ def show(request, id):
     template_data['title'] = movie.name
     template_data['movie'] = movie
     template_data['reviews'] = reviews
+    template_data['average_rating'] = Rating.objects.filter(movie=movie).aggregate(Avg('rating'))['rating__avg']
+    if request.user.is_authenticated:
+        template_data['user_rating'] = Rating.objects.filter(movie=movie, user=request.user).first()
     return render(request, 'movies/show.html', {'template_data': template_data})
 @login_required
 def create_review(request, id):
@@ -71,4 +75,12 @@ def report_review(request, id, review_id):
         if reason:
             review.report_reason = reason
         review.save()
+    return redirect('movies.show', id=id)
+
+@login_required
+def rate_movie(request, id):
+    if request.method == 'POST':
+        movie = get_object_or_404(Movie, id=id)
+        Rating.objects.update_or_create(movie=movie, user=request.user,
+                                        defaults={'rating': int(request.POST['rating'])})
     return redirect('movies.show', id=id)
