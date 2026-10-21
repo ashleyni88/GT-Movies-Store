@@ -1,7 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from movies.models import Movie
-
+from .regions import REGION_CHOICES
 
 # Create your models here.
 class Order(models.Model):
@@ -10,6 +10,12 @@ class Order(models.Model):
     date = models.DateTimeField(auto_now_add=True)
     user = models.ForeignKey(User,
         on_delete=models.CASCADE)
+    region = models.CharField(
+        max_length = 20,
+        choices = REGION_CHOICES,
+        blank = True,
+        default = "",
+    )
     def __str__(self):
         return str(self.id) + ' - ' + self.user.username
 class Item(models.Model):

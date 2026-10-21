@@ -2,7 +2,10 @@ from django.shortcuts import render, redirect, get_object_or_404
 from .models import Movie, Review, Rating
 from django.contrib.auth.decorators import login_required
 from django.db.models import Avg
-
+from django.contrib.auth.decorators import login_required
+from django.db.models import Sum
+from cart.models import Item
+from cart.regions import REGIONS
 # Create your views here.
 
 def index(request):
@@ -84,3 +87,100 @@ def rate_movie(request, id):
         Rating.objects.update_or_create(movie=movie, user=request.user,
                                         defaults={'rating': int(request.POST['rating'])})
     return redirect('movies.show', id=id)
+
+@login_required(login_url="accounts.login")
+def local_popularity(request):
+    region_codes = {
+        region["code"]
+        for region in REGIONS
+    }
+    selected_code = request.GET.get(
+        "region",
+        "southeast",
+    )
+    if selected_code not in region_codes:
+        selected_code = "southeast"
+
+    selected_region = next(
+        region 
+        for region in REGIONS
+        if region["code"] == selected_code
+    )
+
+    rankings = list(
+        Item.objects
+        .filter(
+            order__region__in=region_codes,
+            quantity__gt = 0
+        )
+        .values(
+            "order__region",
+            "movie_id",
+            "movie__name",
+        )
+        .annotate(purchases=Sum("quantity"))
+        .order_by(
+            "order__region",
+            "-purchases",
+            "movie__name",
+            "movie_id",
+        )
+    )
+
+    movies_by_region = {
+        code: []
+        for code in region_codes
+    }
+
+    for row in rankings:
+        region_code = row["order__region"]
+        movies_by_region[region_code].append(row)
+
+    markers = []
+    for region in REGIONS:
+        regional_movies = movies_by_region[region["code"]]
+        markers.append({
+            **region,
+            "total": sum(
+                movie["purchases"]
+                for movie in regional_movies
+            ),
+            "top_movie": (
+                regional_movies[0]["movie__name"]
+                if regional_movies
+                else ""
+            ),
+        })
+    own_purchases = (
+        Item.objects
+        .filter(
+            order__user=request.user,
+            order__region=selected_code,
+            quantity__gt=0,
+        )
+        .values("movie_id", "movie__name")
+        .annotate(purchases=Sum("quantity"))
+        .order_by(
+            "-purchases",
+            "movie__name",
+            "movie_id",
+        )
+    )
+
+    return render(
+        request,
+        "movies/local_popularity.html",
+        {
+            "template_data": {
+                "title": "Local Popularity Map",
+            },
+            "regions": REGIONS,
+            "selected_region": selected_region,
+            "top_movies": (
+                movies_by_region[selected_code][:10]
+            ),
+            "own_purchases": own_purchases,
+            "markers": markers,
+        },
+    )
+

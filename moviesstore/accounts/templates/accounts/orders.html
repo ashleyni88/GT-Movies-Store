@@ -13,6 +13,7 @@
           </div>
           <div class="card-body">
             <b>Date:</b> {{ order.date }}<br />
+            <p> Purchase region: {{ order.get_region_display|default:"Not recorded" }} </p>
             <b>Total:</b> ${{ order.total }}<br />
             <table class="table table-bordered table-striped text-center mt-3">
               <thead>
