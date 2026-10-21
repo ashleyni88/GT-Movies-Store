@@ -1,0 +1,42 @@
+{% extends "admin/base_site.html" %}
+
+{% block breadcrumbs %}
+<div class = "breadcrumbs">
+    <a href="{% url 'admin:index' %}"> Home</a>
+    &rsaquo; Top Movie Purchasers
+
+</div>
+
+{% endblock %}
+
+{% block content %}
+<div id = "content-main">
+    {% if leaders %}
+    <div class ="module">
+        <table>
+            <caption> Highest Movie Purchase Total </caption>
+            <thead>
+                <tr>
+                    <th scope="col"> Username</th>
+                    <th scope="col"> Movies Purchased</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for purchaser in leaders %}
+                <tr>
+                    <td>{{purchaser.username}}</td>
+                    <td>{{purchaser.movies_purchased}}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <p> These users tied for highest total movies purchased.</p>
+
+    {% else %}
+    <p>No movies have been purchased yet.</p>
+
+    {% endif %}
+</div>
+
+{% endblock %}
