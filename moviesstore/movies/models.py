@@ -20,3 +20,7 @@ class Review(models.Model):
     report_reason = models.CharField(max_length=255, blank=True, null=True)
     def __str__(self):
         return str(self.id) + ' - ' + self.movie.name
+class Rating(models.Model):
+    movie = models.ForeignKey(Movie, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    rating = models.IntegerField()
