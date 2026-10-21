@@ -37,7 +37,32 @@
       <div class="text-end">
         <a class="btn btn-outline-secondary mb-2"><b>Total to pay:</b> ${{ template_data.cart_total }}</a>
         {% if template_data.movies_in_cart|length > 0 %}
-        <a href="{% url 'cart.purchase' %}" class="btn bg-dark text-white mb-2">Purchase</a>
+        <form method = "post"
+              action ="{%url 'cart.purchase' %}"
+              class = "mb=3">
+          {% csrf_token %}
+          <label for="purchase-region" class = "form-label">
+            Purchase region
+          </label>
+          <select id = "purchase-region"
+                  name = "region"
+                  class = "form-select  mb-2"
+                  required>
+            <option value = "">Select your region</option>
+            {% for code, label in template_data.region_choices %}
+              <option value = "{{ code }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+
+          {% if template_data.region_error %}
+            <p class = "text-danger">
+            {{ template_data.region_error }}
+            </p>
+          {% endif %}
+
+          <button type = "submit"
+                  class = "btn bg-dark text-white"> Purchase</button>
+        </form>
         <a href="{% url 'cart.clear' %}">
           <button class="btn btn-danger mb-2">
             Remove all movies from Cart

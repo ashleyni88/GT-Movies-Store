@@ -1,0 +1,174 @@
+{% extends 'base.html' %}
+{% block content %}
+<link rel="stylesheet"
+      href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<div class="container py-4">
+    <h2>Local Popularity Map</h2>
+
+    <p>
+        Discover the most purchased movies across five U.S. regions. Rankings use all-time purchased quantities from orders with a declared region.
+    </p>
+
+    <p class="text-muted">
+    Markers represent broad regions, not exact customer
+    locations. Blue markers have purchases; gray markers
+    have no purchases yet.
+  </p>
+
+  <form method="get" class="mb-3">
+    <label for="region" class="form-label">
+      Select a region
+    </label>
+
+    <div class="d-flex gap-2">
+      <select id="region"
+              name="region"
+              class="form-select">
+        {% for region in regions %}
+          <option value="{{ region.code }}"
+            {% if region.code == selected_region.code %}
+              selected
+            {% endif %}>
+            {{ region.name }}
+          </option>
+        {% endfor %}
+      </select>
+
+      <button class="btn btn-dark" type="submit">
+        Show movies
+      </button>
+    </div>
+  </form>
+
+  <div id="popularity-map"
+       style="height: 420px;"
+       class="border rounded mb-4"
+       aria-label="Regional movie popularity map">
+  </div>
+
+  <noscript>
+    <p>
+      Enable JavaScript to use the map. You can still
+      select regions using the form above.
+    </p>
+  </noscript>
+
+  <h3>{{ selected_region.name }}: Top movies</h3>
+
+  <p>Ranked by copies purchased, highest first.</p>
+
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>Rank</th>
+        <th>Movie</th>
+        <th>Copies purchased</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {% for movie in top_movies %}
+        <tr>
+          <td>{{ forloop.counter }}</td>
+          <td>{{ movie.movie__name }}</td>
+          <td>{{ movie.purchases }}</td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="3">
+            No purchases recorded in this region yet.
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h3>Your purchases in {{ selected_region.name }}</h3>
+
+  <p>
+    These are your contributions to the regional totals.
+    Other customers' purchases are included in the
+    rankings above.
+  </p>
+
+  <ul>
+    {% for movie in own_purchases %}
+      <li>
+        {{ movie.movie__name }}:
+        {{ movie.purchases }} purchased
+      </li>
+    {% empty %}
+      <li>You have no purchases in this region yet.</li>
+    {% endfor %}
+  </ul>
+
+  <a href="{% url 'accounts.orders' %}">
+    View your order history
+  </a>
+</div>
+
+{{ markers|json_script:"regional-popularity-data" }}
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+</script>
+
+<script>
+  const regionalData = JSON.parse(
+    document.getElementById(
+      "regional-popularity-data"
+    ).textContent
+  );
+
+  const mapContainer = document.getElementById(
+    "popularity-map"
+  );
+
+  if (typeof L === "undefined") {
+    mapContainer.textContent =
+      "The map could not load. Use the region selector above.";
+  } else {
+    const map = L.map("popularity-map").setView(
+      [38.5, -97.5],
+      4
+    );
+
+    L.tileLayer(
+      "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+      {
+        maxZoom: 19,
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright">' +
+          'OpenStreetMap</a> contributors'
+      }
+    ).addTo(map);
+
+    regionalData.forEach((region) => {
+      const marker = L.circleMarker(
+        [region.lat, region.lng],
+        {
+          radius: region.total > 0 ? 15 : 9,
+          color: region.total > 0 ? "#0d6efd" : "#6c757d",
+          fillOpacity: 0.8
+        }
+      ).addTo(map);
+
+      const label = document.createElement("span");
+
+      label.textContent =
+        region.name + ": " +
+        region.total + " copies purchased" +
+        (region.top_movie
+          ? ". Top movie: " + region.top_movie
+          : ". No purchases yet");
+
+      marker.bindTooltip(label);
+
+      marker.on("click", () => {
+        const url = new URL(window.location.href);
+        url.searchParams.set("region", region.code);
+        window.location.assign(url);
+      });
+    });
+  }
+</script>
+{% endblock %}
